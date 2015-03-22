@@ -1,5 +1,3 @@
-// Author: Ryan Alexander
-
 import java.io.*;
 import java.net.*;
 import java.nio.ByteBuffer;
@@ -68,6 +66,7 @@ class FileReceiver {
 		this.corrupted = true;
 		while (this.corrupted) {
 			System.out.println("Receiving packet");
+			System.out.println(bytesToHex(packet.getData()));
 			socket.receive(packet);
 			processPacket();			
 		}
@@ -75,12 +74,13 @@ class FileReceiver {
 
 	private void processPacket() throws IOException{
 		rcvBuffer = packet.getData();
-		ByteBuffer buffer = ByteBuffer.wrap(rcvBuffer);
+		ByteBuffer buffer = ByteBuffer.wrap(rcvBuffer, 0, packet.getLength());
 		
 		checksum = buffer.getInt();
 		flags = buffer.get();
-		dataBuffer = new byte[DATA_BUFFER_SIZE];
+		dataBuffer = new byte[buffer.remaining()];
 		buffer.get(dataBuffer);
+		dataBuffer = ByteBuffer.wrap(dataBuffer).array();
 		integrityCheck(rcvBuffer);
 	}
 
@@ -119,4 +119,15 @@ class FileReceiver {
 	private boolean isEOF() {
 		return (flags & FIN_MASK) == FIN_MASK;
 	}
+	
+    final protected static char[] hexArray = "0123456789ABCDEF".toCharArray();
+    public static String bytesToHex(byte[] bytes) {
+        char[] hexChars = new char[bytes.length * 2];
+        for ( int j = 0; j < bytes.length; j++ ) {
+            int v = bytes[j] & 0xFF;
+            hexChars[j * 2] = hexArray[v >>> 4];
+            hexChars[j * 2 + 1] = hexArray[v & 0x0F];
+        }
+        return new String(hexChars);
+    }
 }

@@ -1,5 +1,3 @@
-// Author: Ryan Alexander
-
 import java.io.*;
 import java.net.*;
 import java.nio.ByteBuffer;
@@ -58,7 +56,6 @@ class FileSender {
         // Sending FileName
 		packet = new DatagramPacket(packetBuffer, PACKET_BUFFER_SIZE, rcvAddress, rcvPort);
 		sendFileName(rcvFileName);
-		socket.send(packet);
 
         // Sending Data
 		FileInputStream fis = new FileInputStream(fileToOpen);
@@ -71,6 +68,8 @@ class FileSender {
 			if (numBytes < DATA_BUFFER_SIZE) {
 				isEOF = true;
 			}
+			packet.setLength(numBytes + DATA_BUFFER_OFFSET - 3); 
+			System.out.println(numBytes);
 			send(dataBuffer, isEOF);
 			numBytes = bis.read(dataBuffer);
 		}
@@ -93,6 +92,7 @@ class FileSender {
 		DatagramPacket ackPacket = new DatagramPacket(ackBuffer, PACKET_BUFFER_SIZE);
 		while (waitForAck) {
 			System.out.println("Sending data");
+			System.out.println(bytesToHex(packet.getData()));
 			socket.send(packet);
 			try {
 				socket.receive(ackPacket);
@@ -119,6 +119,7 @@ class FileSender {
 			buffer.put((byte) 0);
 		}
 		buffer.put(data);
+		
 		int checksum = FileReceiver.calculateChecksum(buffer.array());
 		System.out.println(checksum);
 		buffer.putInt(CHECKSUM_OFFSET, checksum);
@@ -127,4 +128,15 @@ class FileSender {
 	private boolean isACK() {
 		return (flags & ACK_MASK) == ACK_MASK;
 	}
+	
+    final protected static char[] hexArray = "0123456789ABCDEF".toCharArray();
+    public static String bytesToHex(byte[] bytes) {
+        char[] hexChars = new char[bytes.length * 2];
+        for ( int j = 0; j < bytes.length; j++ ) {
+            int v = bytes[j] & 0xFF;
+            hexChars[j * 2] = hexArray[v >>> 4];
+            hexChars[j * 2 + 1] = hexArray[v & 0x0F];
+        }
+        return new String(hexChars);
+    }
 }
